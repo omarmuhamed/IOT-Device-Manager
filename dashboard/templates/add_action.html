@@ -1,0 +1,68 @@
+<div class="modal fade" id="addaction" tabindex="-1" aria-labelledby="addactionLabel"
+     aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h1 class="modal-title fs-5" id="addactionLabel">Add Action</h1>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"
+                        aria-label="Close"></button>
+            </div>
+            <form class="" id="addactionform" action="#" autocomplete="off"
+                  novalidate>
+                <input autocomplete="false" value="{{ serial }}" name="serial" id="serial" type="hidden" style="display:none;">
+                <div class="modal-body">
+                    <div class="form-white mb-4">
+                        <h5>Data / Event</h5>
+                        <select class="form-select" id="action_trigger" name="trigger" required>
+                            <option value="-1" selected>Select Data/Event</option>
+                        </select>
+                        <div class="invalid-feedback">
+                            Please select event/data.
+                        </div>
+                    </div>
+                    <div class="form-white mb-4">
+                        <h5>Condition</h5>
+                        <select class="form-select" id="action_condition" name="condition" required>
+                            <option value="-1" selected>Select Condition</option>
+                        </select>
+                        <div class="invalid-feedback">
+                            Please select condition.
+                        </div>
+                    </div>
+                    <div class="form-floating form-white mb-4">
+                        <input type="text" id="action_value" name="value" value=""
+                               class="form-control form-control-lg" placeholder="Enter Target Value" required/>
+                        <label class="form-label" for="value">Value</label>
+                        <div class="invalid-feedback">
+                            Please enter Target Value.
+                        </div>
+                    </div>
+                    <div class="form-white mb-4">
+                        <h5>Target Device</h5>
+                        <select class="form-select" id="action_target" name="target" required>
+                            <option value="-1" selected>Select Target</option>
+                        </select>
+                        <div class="invalid-feedback">
+                            Please select target device.
+                        </div>
+                    </div>
+                    <div class="form-white mb-4">
+                        <h5>Action</h5>
+                        <select class="form-select" id="action" name="action" required>
+                            <option value="-1" selected>Select Action</option>
+                        </select>
+                        <div class="invalid-feedback">
+                            Please select action.
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        Close
+                    </button>
+                    <button type="button" class="btn btn-success" id="ConfirmActionAdd">Add</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

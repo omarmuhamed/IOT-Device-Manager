@@ -1,0 +1,31 @@
+<div class="modal fade" id="adddevice" tabindex="-1" aria-labelledby="adddevicetLabel"
+     aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h1 class="modal-title fs-5" id="adddeviceLabel">Add Device</h1>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"
+                        aria-label="Close"></button>
+            </div>
+            <form class="needs-validation" id="adddeviceform" action="#" method="post" autocomplete="off"
+                  novalidate>
+                <div class="modal-body">
+                    <div class="form-floating form-white mb-4">
+                        <input type="text" id="serial" name="serial" value=""
+                               class="form-control form-control-lg" placeholder="Enter Device Seria Number" required/>
+                        <label class="form-label" for="serial">Serial</label>
+                        <div class="invalid-feedback">
+                            Please enter device number.
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        Close
+                    </button>
+                    <button type="submit" class="btn btn-success" id="ConfirmDeviceAdd">Add</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

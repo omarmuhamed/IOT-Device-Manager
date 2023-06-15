@@ -1,0 +1,69 @@
+<div class="modal fade" id="addcomponent" tabindex="-1" aria-labelledby="addcomponentLabel"
+     aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h1 class="modal-title fs-5" id="addcomponentLabel">Add Component</h1>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"
+                        aria-label="Close"></button>
+            </div>
+            <form class="needs-validation" id="addcomponentform" action="/AddComponent" method="post" autocomplete="off"
+                  novalidate>
+                <input autocomplete="false" value="{{ serial }}" name="serial" id="serial" type="hidden"
+                       style="display:none;">
+                <div class="modal-body">
+                    <div class="form-white mb-4">
+                        <select class="form-select" id="component" name="component" required>
+                            <option value="-1" selected>Select Component</option>
+                            <option value="hc-sr04">Distance Sensor (HC-SR04)</option>
+                            <option value="dht11">Temperature Sensor (DHT11)</option>
+                            <option value="d-sun">Motion Sensor (D-SUN PIR)</option>
+                            <option value="ldr">Light Sensor (LDR)</option>
+                            <option value="buzzer">Buzzer</option>
+                            <option value="led">LED</option>
+                            <option value="camera">Camera</option>
+                        </select>
+                        <div class="invalid-feedback">
+                            Please select component.
+                        </div>
+                    </div>
+                    <div class="form-floating form-white mb-4">
+                        <input type="text" id="name" name="name" value=""
+                               class="form-control form-control-lg" placeholder="Enter Component Name" required/>
+                        <label class="form-label" for="name">Name</label>
+                        <div class="invalid-feedback">
+                            Please enter Component Name.
+                        </div>
+                    </div>
+
+                    <div id="data-wrapper">
+                        <div id="data">
+
+                        </div>
+                    </div>
+                    <div id="parameters-wrapper">
+                        <div id="parameters">
+
+                        </div>
+                    </div>
+                    <div id="options-wrapper">
+                        <div id="options">
+
+                        </div>
+                    </div>
+                    <div id="actions-wrapper">
+                        <div id="actions">
+
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        Close
+                    </button>
+                    <button type="submit" class="btn btn-success" id="ConfirmComponentAdd">Add</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

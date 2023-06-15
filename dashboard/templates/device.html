@@ -1,0 +1,382 @@
+{% extends "base.html" %}
+{% block content %}
+    <div class="col d-md-flex justify-content-md-end text-right">
+        <button class="btn btn-primary me-md-2" type="button" data-bs-toggle="modal"
+                data-bs-target="#addcomponent" id="addcomponentbutton">
+            <i class="bi bi-person-plus"> Add Component </i>
+        </button>
+    </div>
+    <div class="container-fluid">
+        <div class="row row-cols-1 row-cols-md-4 g-4">
+            {% for key, val in components.items() %}
+                <div class="col">
+                    <div class="card h-100">
+                    {% if val not in list_of_output %}
+                        <a href="{{ url_for('component', serial=serial, comp=val) }}" style="text-decoration: none;color: black;">
+                    {% endif %}
+                        <div class="card-body">
+                            <h5 class="card-title">{{ val }}</h5>
+                            <div class="d-flex justify-content-center align-items-center">
+                                <i class="bi bi-cpu-fill" style="font-size: 5rem!important;"></i>
+                            </div>
+                        </div>
+                    {% if val not in list_of_output %}
+                    </a>
+                    {% endif %}
+                        <div class="card-footer">
+                            <small class="text-muted">
+                                <div class="d-flex justify-content-between align-items-center footercontainer">
+                                    <div class="">
+                                        <span class="badge rounded-pill bg-danger connectivity">Disconnected</span>
+                                        {% if val in list_of_output %}<span class="badge rounded-pill bg-danger status">Off</span> {% endif %}
+                                    </div>
+                                    <div class="ml-auto">
+                                        <button class="btn btn-outline-danger {{ val }}" id="deleteComponent"
+                                                data-component="{{ val }}"><i class="bi bi-trash3"></i></button>
+                                    </div>
+                                </div>
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% include "add_component.html" %}
+    {% include "add_action.html" %}
+{% endblock %}
+{% block scripts %}
+    <script>
+        var output_devices = {{ output|tojson }};
+        var actions_to_add = [];
+        (function () {
+            'use strict'
+
+            // Fetch all the forms we want to apply custom Bootstrap validation styles to
+            var forms = document.querySelectorAll('.needs-validation')
+
+            // Loop over them and prevent submission
+            Array.prototype.slice.call(forms)
+                .forEach(function (form) {
+                    form.addEventListener('submit', function (event) {
+                        if (!form.checkValidity() || $(form.querySelector('#component')).val() === '-1') {
+                            if ($(form.querySelector('#component')).val() === '-1') {
+                                alert("Select Component");
+                            }
+                            event.preventDefault()
+                            event.stopPropagation()
+                        } else {
+                            event.preventDefault(); // Prevent form submission
+
+
+                            var jsonData = {};
+                            jsonData.parameters = {};
+                            jsonData.name = $('#name').val();
+                            jsonData.serial = $('#serial').val();
+                            jsonData.component = $('#component').val();
+                            $("#parameters-wrapper input").each(function (index, element) {
+                                jsonData.parameters[$(element).attr("name")] = $(element).val()
+                            })
+                            if (components[jsonData.component]['type'] === 'sensor') {
+                                jsonData.options = {}
+                                jsonData.data = []
+                                jsonData.actions = []
+                                $("#options-wrapper input").each(function (index, element) {
+                                    jsonData.options[$(element).attr("name")] = $(element).val()
+                                });
+                                $("#data-wrapper input[type='checkbox']:checked").each(function (index, element) {
+                                    jsonData.data.push($(element).attr('name'));
+                                });
+                                jsonData.actions = actions_to_add;
+
+                            }
+
+                            console.log(jsonData);
+                            $.ajax({
+                                type: 'POST',
+                                url: '/addcomponent',
+                                contentType: 'application/json',
+                                data: JSON.stringify(jsonData),
+                                success: function (r, s, x) {
+                                    if (r['error'] === 1) {
+                                        alert(r['text']);
+                                    } else {
+                                        location.reload();
+                                    }
+                                }
+
+                            });
+                        }
+
+                        form.classList.add('was-validated')
+                    }, false)
+                })
+        })();
+
+        function add_row(e, name, visible, v = "") {
+            newRowAdd =
+                '<div id="newrow">' +
+                '<div class="form-floating mb-4">' +
+                '<input value="' + v + '" type="text" name="' + name + '" id="' + name + '" class="form-control form-control-lg" placeholder="' + visible + '" required> ' +
+                '<label class="form-label" for="' + name + '">' + visible + '</label>' +
+                '<div class="invalid-feedback">Please enter ' + visible + '.</div>' +
+                '</div> ' +
+                '</div>';
+            e.append(newRowAdd)
+        }
+
+        function add_check_row(e, name, visible, v = "") {
+            newRow = '<div class="form-check">' +
+                '<input class="form-check-input" type="checkbox" value="" id="' + name + '" name="' + name + '">' +
+                '<label class="form-check-label" for="' + name + '">' +
+                visible +
+                '</label>' +
+                '</div>';
+            e.append(newRow);
+        }
+
+        function add_action_row(action) {
+            actionRow = '';
+
+        }
+
+        $('#component').change(function () {
+            $("#addcomponentform").removeClass('was-validated');
+            $('#options').empty();
+            $('#parameters').empty();
+            $('#data').empty();
+            $('#data-wrapper h5').remove();
+            $('#actions-wrapper h5').remove();
+            $('#actions-wrapper #actionAdder').remove();
+            $('#actions').empty();
+            actions_to_add = [];
+            if ($(this).val() !== '-1') {
+                if (components[$(this).val()]['type'] === 'sensor') {
+                    $("#data-wrapper").prepend('<h5>Data</h5>');
+                    $("#actions-wrapper").prepend('<h5>Actions</h5>');
+                    $("#actions-wrapper").append('<button id="actionAdder" type="button"' +
+                        'class="btn btn-dark" onclick=' + "$('#addaction').modal('show');" + '>' +
+                        '<span class="bi bi-plus-square-dotted">' +
+                        '</span> Add Action' +
+                        '</button>');
+                    components[$(this).val()]["data"].forEach(element => add_check_row($(this).parent().parent().children("#data-wrapper").children("#data"), element.name, element.visiblename));
+                }
+                components[$(this).val()]["parameters"].forEach(element => add_row($(this).parent().parent().children("#parameters-wrapper").children("#parameters"), element.name, element.visiblename));
+                components[$(this).val()]["options"].forEach(element => add_row($(this).parent().parent().children("#options-wrapper").children("#options"), element.name, element.visiblename));
+            }
+        })
+        const addcomponent = document.getElementById('addcomponent')
+        addcomponent.addEventListener('show.bs.modal', event => {
+            $("#addcomponentform").removeClass('was-validated');
+            $('#options').empty();
+            $('#parameters').empty();
+            $('#data').empty();
+            $('#name').val('')
+            $('#data-wrapper h5').remove();
+            $('#actions-wrapper h5').remove();
+            $('#actions-wrapper #actionAdder').remove();
+            $('#actions').empty()
+            actions_to_add = [];
+            $('#component').prop('selectedIndex', 0);
+        });
+        $.fn.searchDictByKeyValue = function (key, value) {
+            return $.grep(this, function (item) {
+                return item[key] === value;
+            });
+        };
+        const addaction = document.getElementById('addaction')
+        addaction.addEventListener('show.bs.modal', event => {
+
+            var selected_device = $('#component').val();
+            var checkedboxes = $("#data input[type='checkbox']:checked");
+            $("#action_trigger option:not(:first-child)").remove();
+            $("#action_target option:not(:first-child)").remove();
+            $("#action option:not(:first-child)").remove();
+            $("#action_condition option:not(:first-child)").remove();
+            $('#action_value').val('');
+            checkedboxes.each(function (index, element) {
+                var temp_val = $(element).attr('name');
+                var temp_text = $(components[selected_device]['data']).searchDictByKeyValue('name', $(element).attr('name'))[0]['visiblename'];
+                $("#action_trigger").append($('<option>', {
+                    value: temp_val,
+                    text: temp_text
+                }).attr('data-type', selected_device === 'camera' ? '1' : '0'));
+            });
+            $(components[selected_device]['events']).each(function (index, element) {
+                $('#action_trigger').append($('<option>', {
+                    text: element.visiblename,
+                    value: element.name
+                }).attr('data-type', '1'));
+            });
+            $(output_devices).each(function (index, elem) {
+                $.each(elem, function (key, value) {
+                    $('#action_target').append($('<option>', {
+                        text: key,
+                        value: value
+                    }));
+                });
+
+            });
+
+        });
+        $('#action_trigger').change(function () {
+            var selected_device = $('#component').val();
+            $('#action_condition option:not(:first-child)').remove();
+            if ($('#action_trigger').val() !== '-1') {
+                if ($('#action_trigger option:selected').attr('data-type') === '0') {
+                    $('#action_condition').prop('disabled', false);
+                    $('#action_value').prop('disabled', false);
+                    $('#action_condition').prop('required', true);
+                    $('#action_value').prop('required', true);
+                    var t = $(components[selected_device]['data']).searchDictByKeyValue('name', $('#action_trigger').val())[0]['type'];
+                    $(conditions[t]).each(function (index, element) {
+                        $("#action_condition").append($('<option>', {
+                            value: element.name,
+                            text: element.visiblename
+                        }));
+                    });
+                } else {
+                    $('#action_condition').prop('disabled', true);
+                    $('#action_value').prop('disabled', true);
+                    $('#action_condition').prop('required', false);
+                    $('#action_value').prop('required', false);
+                }
+
+            }
+        });
+        $('#action_target').change(function () {
+            $('#action option:not(:first-child)').remove();
+            var selected_target = $('#action_target option:selected').attr('value');
+            if ($('#action_target').val() !== '-1') {
+                $(components[selected_target]['slots']).each(function (index, elem) {
+
+                    $('#action').append($('<option>', {
+                        value: elem.name,
+                        text: elem.visiblename
+                    }));
+
+                });
+            }
+        });
+        $("#ConfirmActionAdd").click(function () {
+            var data_val = $('#action_trigger').val();
+            var condition_val = $('#action_condition').val();
+            var val = $('#action_value').val();
+            var target_val = $('#action_target').val();
+            var target_action = $('#action').val();
+            var isEvent = $('#action_condition').prop('disabled');
+            var action = {};
+            if (isEvent) {
+                if (data_val !== '-1' && target_val !== '-1' && target_action !== '-1') {
+                    action.type = "event";
+                    action.event = data_val;
+                    action.target = $('#action_target').find(':selected').text();
+                    action.action = target_action;
+                    actions_to_add.push(action);
+                    $('#addaction').modal('hide');
+                    append_action("event", [$('#action_trigger').find(':selected').text(), $('#action').find(':selected').text(), $('#action_target').find(':selected').text()])
+                } else {
+                    alert("All fields are required");
+                }
+            } else {
+                if (data_val !== '-1' && target_val !== '-1' && target_action !== '-1' && condition_val !== '-1' && val !== '') {
+                    action.type = "condition";
+                    action.data = data_val
+                    action.condition = condition_val;
+                    action.value = val
+                    action.target = $('#action_target').find(':selected').text();
+                    action.action = target_action;
+                    actions_to_add.push(action);
+                    $('#addaction').modal('hide');
+                    append_action("condition", [$('#action_trigger').find(':selected').text(), $('#action_condition').find(':selected').text(), $('#action_value').val(), $('#action').find(':selected').text(), $('#action_target').find(':selected').text()])
+                } else {
+                    alert("All fields are required");
+                }
+            }
+        });
+
+        function append_action(type, text) {
+            if (type === 'condition') {
+                var t = 'If ' + text[0] + ' ' + text[1] + ' ' + text[2] + ' ' + text[3] + ' ' + text[4];
+            } else {
+                var t = 'When ' + text[0] + ' ' + text[1] + ' ' + text[2];
+            }
+            var row = '<div id="actionrow" data-index="' + (actions_to_add.length - 1).toString() + '"><div class="input-group mb-4">' +
+                '<button class="btn btn-danger" id="DeleteAction" type="button">' +
+                '<i class="bi bi-trash"></i> Delete</button>' +
+                '<input value="' + t + '" type="text" name="action_text" id="action_text" class="form-control form-control-lg" placeholder="Action" disabled> ' +
+                '</div> </div>';
+            $('#actions').append(row);
+        }
+
+        $("body").on("click", "#DeleteAction", function () {
+            actions_to_add.splice(parseInt($(this).parents("#actionrow").attr('data-index')), 1);
+            $(this).parents("#actionrow").remove();
+        });
+        $('body').on("click", "#deleteComponent", function () {
+            var comp = $(this).parents(".card").find('.card-body h5').text();
+            var data = {"serial": "{{ serial }}", 'component': comp};
+            $.ajax({
+                url: '/deletecomponent',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify(data),
+                success: function (r, s, x) {
+                    if (r['error'] === 0) {
+                        location.reload();
+                    } else {
+                        alert(r['text']);
+                    }
+                }
+
+            });
+        });
+    </script>
+    <script>
+        function subscribeToTopics(reconnect, uri) {
+            var serial = $('#serial').val();
+            $('button[id="deleteComponent"]').each(function (index, element) {
+                console.log('$aws/things/' + serial + '_'+$(element).attr('data-component') + '/shadow/update/delta')
+                client.subscribe('$aws/things/' + serial + '_'+$(element).attr('data-component') + '/shadow/update/delta');
+            });
+        }
+
+        function proccessMessage(message) {
+            console.log('test');
+            let info = JSON.parse(message.payloadString);
+            var device = message.destinationName.split('/')[2].split('_')[1];
+            if (info.state.hasOwnProperty('connectivityStatus')) {
+                var conn = $('.' + device).parents('.footercontainer').find('.connectivity')
+                if (info.state.connectivityStatus === 0) {
+                    var conn2 = $('.' + device).parents('.footercontainer').find('.status')
+                    conn.removeClass('bg-success');
+                    conn.addClass('bg-danger');
+                    conn.text('Disconnected')
+                    //conn2.removeClass('bg-success');
+                    //conn2.addClass('bg-danger');
+                    //conn2.text('Off')
+                } else {
+                    conn.addClass('bg-success');
+                    conn.removeClass('bg-danger');
+                    conn.text('Connected')
+                }
+            }
+            if (info.state.hasOwnProperty('state')) {
+                var conn = $('.' + device).parents('.footercontainer').find('.status')
+                if (info.state.state === 0) {
+                    conn.removeClass('bg-success');
+                    conn.addClass('bg-danger');
+                    conn.text('Off')
+                } else {
+                    conn.addClass('bg-success');
+                    conn.removeClass('bg-danger');
+                    conn.text('On')
+                }
+            }
+        }
+        console.log($('#serial').val() + '_Web');
+        var client = getClient(subscribeToTopics, $('#serial').val() + '_Web');
+        client.onMessageArrived = proccessMessage;
+        //client.onConnected = subscribeToTopics;
+    </script>
+{% endblock %}

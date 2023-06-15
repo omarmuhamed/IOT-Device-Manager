@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{% block title %}{% endblock %}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.9.1/font/bootstrap-icons.css">
+    {% block styles %}{% endblock %}
+</head>
+<body>
+{% block content %}
+{% endblock %}
+<script src="/static/js/config.js"></script>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.1/jquery.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/js-cookie@3.0.5/dist/js.cookie.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.1/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/3.1.2/components/core-min.js"
+        type="text/javascript"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/3.1.2/components/hmac-min.js"
+        type="text/javascript"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/3.1.2/components/sha256-min.js"
+        type="text/javascript"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"
+        type="text/javascript"></script>
+<script>
+    var mqttClient;
+    var mqttEndpoint = 'a192oopoopwqzj-ats.iot.eu-central-1.amazonaws.com';
+
+    function getEndpoint() {
+        const REGION = "eu-central-1";
+
+        const IOT_ENDPOINT = mqttEndpoint;
+
+        const KEY_ID = Cookies.get("aws_id");
+
+        const SECRET_KEY = Cookies.get("aws_secret");
+
+        const dt = (new Date()).toISOString().replace(/[^0-9]/g, "");
+        const ymd = dt.slice(0, 8);
+        const fdt = `${ymd}T${dt.slice(8, 14)}Z`
+
+        const scope = `${ymd}/${REGION}/iotdevicegateway/aws4_request`;
+        const ks = encodeURIComponent(`${KEY_ID}/${scope}`);
+        let qs = `X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=${ks}&X-Amz-Date=${fdt}&X-Amz-SignedHeaders=host`;
+        const req = `GET\n/mqtt\n${qs}\nhost:${IOT_ENDPOINT}\n\nhost\n${p4.sha256('')}`;
+        qs += '&X-Amz-Signature=' + p4.sign(
+            p4.getSignatureKey(SECRET_KEY, ymd, REGION, 'iotdevicegateway'),
+            `AWS4-HMAC-SHA256\n${fdt}\n${scope}\n${p4.sha256(req)}`
+        );
+        qs += '&X-Amz-Security-Token=' + encodeURIComponent(Cookies.get("aws_session"));
+        return `wss://${IOT_ENDPOINT}:443/mqtt?${qs}`;
+    }
+
+    function p4() {
+    }
+
+    p4.sign = function (key, msg) {
+        const hash = CryptoJS.HmacSHA256(msg, key);
+        return hash.toString(CryptoJS.enc.Hex);
+    };
+    p4.sha256 = function (msg) {
+        const hash = CryptoJS.SHA256(msg);
+        return hash.toString(CryptoJS.enc.Hex);
+    };
+    p4.getSignatureKey = function (key, dateStamp, regionName, serviceName) {
+        const kDate = CryptoJS.HmacSHA256(dateStamp, 'AWS4' + key);
+        const kRegion = CryptoJS.HmacSHA256(regionName, kDate);
+        const kService = CryptoJS.HmacSHA256(serviceName, kRegion);
+        const kSigning = CryptoJS.HmacSHA256('aws4_request', kService);
+        return kSigning;
+    };
+
+    function reload_key() {
+        var devices_list = JSON.parse(localStorage.getItem('devicelist'));
+        $.ajax({
+            url: '/devicedeleted',
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({'list': devices_list}),
+            success: function (r, s, x) {
+                if (r['error']) {
+                    alert(r['text']);
+                } else {
+                    location.reload();
+                }
+            }
+        });
+    }
+
+    function getClient(success, clientId) {
+        if (!success) success = () => console.log("connected");
+        const _client = initClient(clientId);
+        const connectOptions = {
+            useSSL: true,
+            mqttVersion: 4,
+            keepAliveInterval: 3000,
+            onSuccess: success,
+            onFailure: reload_key
+        };
+        _client.connect(connectOptions);
+        return _client;
+    }
+
+    function initClient(clientId) {
+        //const clientId = Math.random().toString(36).substring(7);
+        const _client = new Paho.MQTT.Client(getEndpoint(), clientId);
+
+        _client.publish = function (topic, payload) {
+            let payloadText = JSON.stringify(payload);
+            let message = new Paho.MQTT.Message(payloadText);
+            message.destinationName = topic;
+            message.qos = 0;
+            _client.send(message);
+        }
+        return _client;
+    }
+</script>
+{% block scripts %}{% endblock %}
+
+</body>
+</html>

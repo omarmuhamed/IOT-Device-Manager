@@ -1,0 +1,108 @@
+{% if camera %}
+    <html>
+    <head>
+        <title>PiCamera</title>
+    </head>
+    <body>
+    <center><h1>PiCamera</h1></center>
+    <center><img src="http://192.168.43.196:8000/stream.mjpg" width="640" height="480"></center>
+    </body>
+    </html>
+{% else %}
+    {% extends "base.html" %}
+    {% block styles %}
+        <style>
+            #myCanvas {
+                max-width: 100%;
+                max-height: 100%;
+                width: auto;
+                height: auto;
+            }
+        </style>
+        <link rel="stylesheet" href="https://unpkg.com/@adminkit/core@latest/dist/css/app.css">
+    {% endblock %}
+    {% block content %}
+        <div class="" style="height: 90%;width: 90%;padding: 5%;margin:0;">
+            <canvas id="chartjs-line myCanvas"></canvas>
+        </div>
+    {% endblock %}
+    {% block scripts %}
+
+        <script src="https://unpkg.com/@adminkit/core@latest/dist/js/app.js"></script>
+        <script>
+            function getRandomHexColor() {
+                var letters = '0123456789ABCDEF';
+                var color = '#';
+                for (var i = 0; i < 6; i++) {
+                    color += letters[Math.floor(Math.random() * 16)];
+                }
+                return color;
+            }
+
+            var c = new Chart(document.getElementById("chartjs-line myCanvas"), {
+                type: "line",
+                data: {
+                    labels: [],
+                    datasets: []
+                },
+                options: {
+                    scales: {
+                        xAxes: [{
+                            reverse: true,
+                            gridLines: {
+                                color: "rgba(0,0,0,0.05)"
+                            }
+                        }],
+                        yAxes: [{
+                            borderDash: [5, 5],
+                            gridLines: {
+                                color: "rgba(0,0,0,0)",
+                                fontColor: "#fff"
+                            }
+                        }]
+                    }
+                }
+            });
+            c.resize();
+            var datalist = [];
+            {% for i in range(datacount) %}
+                datalist.push({
+                    label: "{{ data[i] }}",
+                    fill: true,
+                    backgroundColor: "transparent",
+                    borderColor: getRandomHexColor(),
+                    data: []
+                })
+            {% endfor %}
+            c.data.datasets = datalist;
+            c.update();
+
+            function subscribeToTopics(recon, uri) {
+                console.log('connected');
+                client.subscribe('device/{{ serial }}/component/{{ comp }}/data');
+            }
+
+            function proccessMessage(message) {
+                var resp = JSON.parse(message.payloadString);
+                console.log(resp);
+                var i = 0;
+                var currentTime = new Date();
+                var hours = currentTime.getHours();
+                var minutes = currentTime.getMinutes();
+                var seconds = currentTime.getSeconds();
+                var formattedTime = hours + ':' + minutes + ':' + seconds;
+                console.log(formattedTime);
+                for (var key in resp) {
+                    c.data.datasets[i].data.push(resp[key]);
+                    i++;
+                }
+                console.log('test');
+                c.data.labels.push(formattedTime);
+                c.update();
+            }
+
+            var client = getClient(subscribeToTopics, '{{ serial }}_{{ comp }}_Web');
+            client.onMessageArrived = proccessMessage;
+        </script>
+    {% endblock %}
+{% endif %}

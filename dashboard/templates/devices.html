@@ -1,0 +1,170 @@
+{% extends "base.html" %}
+{% block content %}
+    {% if notfound %}
+        <section class="vh-100 gradient-custom">
+            <div class="container h-100">
+                <div class="row d-flex justify-content-center align-items-center h-100">
+                    <div class="col-12 col-md-8 col-lg-6 col-xl-5">
+                        <div class="card bg-dark" style="border-radius: 1rem;">
+                            <div class="card-body p-5 text-center">
+
+                                <div>
+                                    <h5 style="color: aliceblue;">No Device Found</h5>
+                                    <button type="button" class="btn btn-primary" data-bs-toggle="modal"
+                                            data-bs-target="#adddevice">Add Device
+                                    </button>
+                                </div>
+
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    {% else %}
+        <div class="col d-md-flex justify-content-md-end text-right">
+            <button class="btn btn-primary me-md-2" type="button" data-bs-toggle="modal"
+                    data-bs-target="#adddevice" id="adddevicebutton">
+                <i class="bi bi-person-plus"> Add Device </i>
+            </button>
+        </div>
+        <div class="container-fluid">
+            <div class="row row-cols-1 row-cols-md-4 g-4" id="devices">
+
+            </div>
+        </div>
+    {% endif %}
+    {% include "add_device.html" %}
+{% endblock %}
+{% block scripts %}
+    <script>
+        (function () {
+            'use strict'
+
+            // Fetch all the forms we want to apply custom Bootstrap validation styles to
+            var forms = document.querySelectorAll('.needs-validation')
+
+            // Loop over them and prevent submission
+            Array.prototype.slice.call(forms)
+                .forEach(function (form) {
+                    form.addEventListener('submit', function (event) {
+                        if (!form.checkValidity()) {
+                            event.preventDefault()
+                            event.stopPropagation()
+                        } else {
+                            event.preventDefault()
+                            var device_list = localStorage.getItem('devicelist');
+                            if (device_list) {
+                                device_list = JSON.parse(device_list);
+                            } else {
+                                device_list = [];
+                            }
+                            $.ajax({
+                                url: '/adddevice',
+                                type: 'POST',
+                                contentType: 'application/json',
+                                data: JSON.stringify({'device': $('#serial').val(), 'list': device_list}),
+                                success: function (r, s, x) {
+                                    if (r['error']) {
+                                        alert(r['text']);
+                                    } else {
+                                        device_list.push($('#serial').val());
+                                        var uniq_device_list = device_list.filter((value, index, self) => {
+                                            return self.indexOf(value) === index;
+                                        });
+                                        localStorage.setItem('devicelist', JSON.stringify(uniq_device_list));
+                                        location.reload();
+                                    }
+                                }
+                            });
+                        }
+
+                        form.classList.add('was-validated')
+                    }, false)
+                })
+        })();
+        var devices_container = $('#devices');
+        if (devices_container) {
+            $(JSON.parse(localStorage.getItem('devicelist'))).each(function (index, val) {
+                var cardTemplate = `
+<div class="col">
+    <div class="card h-100">
+        <a href="/device/${val}" style="text-decoration: none;color: black;">
+        <div class="card-body">
+            <h5 class="card-title">${val}</h5>
+            <div class="d-flex justify-content-center align-items-center">
+                <i class="bi bi-cpu-fill" style="font-size: 5rem!important;"></i>
+            </div>
+        </div>
+        </a>
+        <div class="card-footer">
+            <small class="text-muted">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div class="">
+                        <span class="badge rounded-pill bg-danger connectivity ${val}">Disconnected</span>
+                    </div>
+                    <div class="ml-auto">
+                        <button class="btn btn-outline-danger" id="deleteDevice" data-serial="${val}"><i class="bi bi-trash3"></i></button>
+                    </div>
+                </div>
+            </small>
+        </div>
+    </div>
+</div>
+`;
+                $('#devices').append(cardTemplate);
+            });
+        }
+        $('body').on("click", "#deleteDevice", function () {
+            console.log("test");
+            var serial = $(this).attr('data-serial');
+            var devices_list = JSON.parse(localStorage.getItem('devicelist'));
+            var filteredList = devices_list.filter(function (item) {
+                return item !== serial;
+            });
+            localStorage.setItem('devicelist', JSON.stringify(filteredList));
+            $.ajax({
+                url: '/devicedeleted',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({'list': filteredList}),
+                success: function (r, s, x) {
+                    if (r['error']) {
+                        alert(r['text']);
+                    } else {
+                        location.reload();
+                    }
+                }
+            });
+        });
+    </script>
+    {% if not notfound %}
+        <script>
+            function subscribeToTopics(reconnect, uri){
+                $('button[id="deleteDevice"]').each(function (index, element) {
+                    console.log('$aws/things/'+ $(element).attr('data-serial') +'/shadow/update/delta')
+                    client.subscribe('$aws/things/'+ $(element).attr('data-serial') +'/shadow/update/delta');
+                });
+            }
+            function proccessMessage(message){
+                let info=JSON.parse(message.payloadString);
+                var device = message.destinationName.split('/')[2];
+                if (info.state.connectivityStatus === 0){
+                    $('.' + device).removeClass('bg-success');
+                    $('.' + device).addClass('bg-danger');
+                    $('.' + device).text('Disconnected')
+                } else {
+                    $('.' + device).addClass('bg-success');
+                    $('.' + device).removeClass('bg-danger');
+                    $('.' + device).text('Connected')
+                }
+            }
+
+            var client = getClient(subscribeToTopics, $($('button[id="deleteDevice"]')[0]).attr('data-serial') + '_Web');
+            client.onMessageArrived = proccessMessage;
+            //client.onConnected = subscribeToTopics;
+
+            //client.publish('device/XXXXAAAA', JSON.stringify({'test': 1}));
+        </script>
+    {% endif %}
+{% endblock %}
